@@ -8,7 +8,7 @@
 
 // コンストラクタ
 got::Window::Window(const LPCSTR _windowName)
-    : windowName(_windowName)
+    : m_WindowName(_windowName)
 {
 }
 // デストラクタ
@@ -39,7 +39,7 @@ MSG got::Window::update()
 // ハンドルの取得
 HWND got::Window::getHWND() const
 {
-    return HWND();
+    return m_hWnd;
 }
 // ウィンドウに関する各種パラメータの設定とウィンドウの作成
 HRESULT got::Window::setupWindow()
@@ -69,7 +69,7 @@ HRESULT got::Window::setupWindow()
     const int windowWidth = (rect.right - rect.left);
     const int windowHeight = (rect.bottom - rect.top);
 
-    HWND hWnd = CreateWindow(
+    m_hWnd = CreateWindow(
         _T("WindowClass"),		// ウィンドウクラス名
         _T("gotLib"),			// ウィンドウタイトル
         WS_OVERLAPPEDWINDOW,	// ウィンドウスタイル
@@ -81,11 +81,11 @@ HRESULT got::Window::setupWindow()
         nullptr,				// ウィンドウメニュー
         hInstance,				// インスタンスハンドル
         nullptr);				// 作成パラメータ
-    if (!hWnd) {
+    if (!m_hWnd) {
         return E_FAIL;
     }
 
-    ShowWindow(hWnd, SW_SHOWNORMAL);
+    ShowWindow(m_hWnd, SW_SHOWNORMAL);
 
     return S_OK;
 }

@@ -3,12 +3,14 @@
 // 更新日:2017/02/26
 // 制作者:got
 //////////////////////////////////////////////////
+#include <stdexcept>
 #include "Game.h"
+#include "../Lib/DirectX12.h"
 
 // コンストラクタ
 Game::Game()
 {
-    window = std::make_shared<got::Window>("DirectX12Project");
+    m_spWindow = std::make_shared<got::Window>("DirectX12Project");
 }
 // デストラクタ
 Game::~Game()
@@ -17,8 +19,13 @@ Game::~Game()
 // 初期化
 bool Game::init()
 {
-    if (window->init()) {
+    if (!m_spWindow->init()) {
         return false;
+    }
+
+    auto hr = got::DirectX12::getInstance().init(1048, 768, m_spWindow);
+    if (FAILED(hr)) {
+        throw std::runtime_error("DirectX12 init() is failed value");
     }
 
     return true;
@@ -27,9 +34,11 @@ bool Game::init()
 void Game::update()
 {
     while (true) {
-        if (window->update().message == WM_QUIT) {
+        if (m_spWindow->update().message == WM_QUIT) {
             break;
         }
+
+        got::DirectX12::getInstance().draw();
     }
 }
 // 終了処理

@@ -22,8 +22,7 @@ public:
 private:
     friend class got::Singleton<Game>;
     Game();
-    std::shared_ptr<got::Window> window;
-    MSG msg;
+    std::shared_ptr<got::Window> m_spWindow;
 
 };
 

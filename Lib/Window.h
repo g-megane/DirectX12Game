@@ -24,8 +24,8 @@ namespace got
         HRESULT setupWindow();
         static LRESULT CALLBACK wndProck(HWND _hWnd, UINT _message, WPARAM _wParam, LPARAM _lParam);
 
-        LPCSTR windowName;
-        HWND hWnd;
+        LPCSTR m_WindowName;
+        HWND m_hWnd;
 
     };
 }
