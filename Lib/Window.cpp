@@ -5,6 +5,7 @@
 //////////////////////////////////////////////////
 #include <tchar.h>
 #include "Window.h"
+#include "../Lib/GlobalValue.h"
 
 // コンストラクタ
 got::Window::Window(const LPCSTR _windowName)
@@ -64,9 +65,9 @@ HRESULT got::Window::setupWindow()
     }
 
     // ウィンドウの作成
-    RECT rect = { 0, 0, 1048, 768 };
+    RECT rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
     AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
-    const int windowWidth = (rect.right - rect.left);
+    const int windowWidth  = (rect.right - rect.left);
     const int windowHeight = (rect.bottom - rect.top);
 
     m_hWnd = CreateWindow(

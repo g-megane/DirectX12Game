@@ -19,15 +19,25 @@ Game::~Game()
 // 初期化
 bool Game::init()
 {
-    if (!m_spWindow->init()) {
-        return false;
-    }
+#ifndef NDEBUG
+    try
+#endif
+    {
+        if (!m_spWindow->init()) {
+            return false;
+        }
 
-    auto hr = got::DirectX12::getInstance().init(1048, 768, m_spWindow);
-    if (FAILED(hr)) {
-        throw std::runtime_error("DirectX12 init() is failed value");
+        auto hr = got::DirectX12::getInstance().init(m_spWindow);
+        if (FAILED(hr)) {
+            throw std::runtime_error("DirectX12 init() is failed value");
+        }
     }
-
+#ifndef NDEBUG
+    catch (std::exception &e)
+    {
+        MessageBoxA(m_spWindow->getHWND(), e.what(), "Exception occured.", MB_ICONSTOP);
+    }
+#endif
     return true;
 }
 // 更新(メインループ)

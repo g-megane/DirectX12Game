@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClInclude Include="Game\Game.h" />
     <ClInclude Include="Lib\DirectX12.h" />
+    <ClInclude Include="Lib\GlobalValue.h" />
     <ClInclude Include="Lib\Singleton.h" />
     <ClInclude Include="Lib\Window.h" />
   </ItemGroup>

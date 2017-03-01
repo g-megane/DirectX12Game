@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////
 // 作成日:2017/02/26
-// 更新日:2017/02/27
+// 更新日:2017/03/01
 // 制作者:got
 //
 // クラス詳細:DirectX12に関するクラス
@@ -27,13 +27,20 @@ namespace got
     public:
         ~DirectX12();
 
-        HRESULT init(const int _width, const int _height, std::shared_ptr<Window> _window);
+        HRESULT init(std::shared_ptr<Window> _window);
         void draw();
         std::shared_ptr<ID3D12Device> getDevice() const;
 
     private:
         friend class Singleton<DirectX12>;
         DirectX12();
+
+        bool createDevice();
+        bool createCommandAllocator();
+        bool createCommandQueue();
+        bool createSwapChain();
+        bool createCommandList();
+        bool createRenderTarget();
 
         void setResourceBarrier(
             ID3D12GraphicsCommandList *commandList,
@@ -47,8 +54,8 @@ namespace got
         Microsoft::WRL::ComPtr<IDXGIFactory2>   m_DxgiFactory;
         Microsoft::WRL::ComPtr<IDXGISwapChain1> m_SwapChain;
         Microsoft::WRL::ComPtr<ID3D12Resource>  m_D3DBuffer[2];
-        int m_BufferWidth;
-        int m_BufferHeight;
+        const int m_BufferWidth;
+        const int m_BufferHeight;
         UINT64 m_FrameCount;
         
         std::shared_ptr<ID3D12Device> m_spDevice;
