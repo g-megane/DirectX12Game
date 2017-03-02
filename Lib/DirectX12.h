@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////
 // 作成日:2017/02/26
-// 更新日:2017/03/01
+// 更新日:2017/03/02
 // 制作者:got
 //
 // クラス詳細:DirectX12に関するクラス
@@ -29,6 +29,8 @@ namespace got
 
         HRESULT init(std::shared_ptr<Window> _window);
         void draw();
+        void begineDraw();
+        void endDraw();
         std::shared_ptr<ID3D12Device> getDevice() const;
 
     private:
@@ -41,6 +43,7 @@ namespace got
         bool createSwapChain();
         bool createCommandList();
         bool createRenderTarget();
+        bool compileShader();
 
         void setResourceBarrier(
             ID3D12GraphicsCommandList *commandList,
@@ -68,6 +71,9 @@ namespace got
 
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapRtv;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapCbvSrvUav;
+
+        Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> m_Pso;
 
     };
 }
