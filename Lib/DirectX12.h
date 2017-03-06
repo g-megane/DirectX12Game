@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////
 // 作成日:2017/02/26
-// 更新日:2017/03/02
+// 更新日:2017/03/06
 // 制作者:got
 //
 // クラス詳細:DirectX12に関するクラス
@@ -52,13 +52,15 @@ namespace got
             D3D12_RESOURCE_STATES after
         );
 
+        BOOL m_IsFullScreen;
+
         std::shared_ptr<Window> m_spWindow;
 
         Microsoft::WRL::ComPtr<IDXGIFactory2>   m_DxgiFactory;
         Microsoft::WRL::ComPtr<IDXGISwapChain1> m_SwapChain;
         Microsoft::WRL::ComPtr<ID3D12Resource>  m_D3DBuffer[2];
-        const int m_BufferWidth;
-        const int m_BufferHeight;
+        int m_BufferWidth;
+        int m_BufferHeight;
         UINT64 m_FrameCount;
         
         std::shared_ptr<ID3D12Device> m_spDevice;
@@ -74,6 +76,9 @@ namespace got
 
         Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> m_Pso;
+        Microsoft::WRL::ComPtr<ID3D12Resource> m_VB;
+        D3D12_VERTEX_BUFFER_VIEW m_VBView = {};
+        D3D12_INDEX_BUFFER_VIEW  m_IBView = {};
 
     };
 }

@@ -1,9 +1,10 @@
 //////////////////////////////////////////////////
 // 作成日:2017/02/26
-// 更新日:2017/03/02
+// 更新日:2017/03/06
 // 制作者:got
 //////////////////////////////////////////////////
 #include <stdexcept>
+#include <sstream>
 #include "DirectX12.h"
 #include "GlobalValue.h"
 
@@ -203,8 +204,9 @@ namespace got {
     {
 
         ID3D10Blob *sig, *info;
-        auto rootSigDesc = D3D12_ROOT_SIGNATURE_DESC();
-        auto hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &sig, &info);
+        auto rootSigDesc  = D3D12_ROOT_SIGNATURE_DESC();
+        rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        auto hr           = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &sig, &info);
         if (FAILED(hr)) {
             throw std::runtime_error("D3D12SerializeRootSignature() is failed value");
         }
@@ -234,57 +236,203 @@ namespace got {
         if (FAILED(hr)) {
             throw std::runtime_error("PS D3DCompileFromFile() compile is failed");
         }
-
-
+        D3D12_INPUT_ELEMENT_DESC inputLayout[] = {
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+        };
+        // ラスタライザステート
         D3D12_RASTERIZER_DESC rasterDesc = {};
-        rasterDesc.FillMode              = D3D12_FILL_MODE_SOLID;
-        rasterDesc.CullMode              = D3D12_CULL_MODE_NONE;
-        rasterDesc.FrontCounterClockwise = FALSE;
-        rasterDesc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
-        rasterDesc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-        rasterDesc.SlopeScaledDepthBias  = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-        rasterDesc.DepthClipEnable       = TRUE;
-        rasterDesc.MultisampleEnable     = FALSE;
-        rasterDesc.AntialiasedLineEnable = FALSE;
-        rasterDesc.ForcedSampleCount     = 0;
-        rasterDesc.ConservativeRaster    = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-
+        rasterDesc.FillMode              = D3D12_FILL_MODE_SOLID;                     // 塗りつぶしのモード
+        rasterDesc.CullMode              = D3D12_CULL_MODE_BACK;                      // 指定された方向に面した三角形が描画されあないことを指定する
+        rasterDesc.FrontCounterClockwise = FALSE;                                     // 三角形が表または裏を向いているかどうかを決定する。(TRUEの場合：頂点がレンダリングターゲット上で反時計回りであり、時計回りの場合後ろ向きと見なされる。FALSEはその逆)
+        rasterDesc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;                  // 指定されたピクセルについかされた奥行き値
+        rasterDesc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;            // ピクセルの最大深度バイアス
+        rasterDesc.SlopeScaledDepthBias  = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;     // 指定されたピクセルの斜面上のスカラー
+        rasterDesc.DepthClipEnable       = TRUE;                                      // 距離に基づいてクリッピングを有効にするかどうか(TRUEの場合：ハードウェアはZ値もクリップする)
+        rasterDesc.MultisampleEnable     = FALSE;                                     // マルチサンプリングするかどうか
+        rasterDesc.AntialiasedLineEnable = FALSE;                                     // 行のアンチエイリアスを有効にするかどうか(MultisampleEnableがFALSEの場合のみ適用される)
+        rasterDesc.ForcedSampleCount     = 0;                                         // UAVレンダリングまたはラスタライズ中に強制されるサンプル数(有効な値：0,1,2,4,8、およびオプションでは16。0はサンプル数が強制されない)
+        rasterDesc.ConservativeRaster    = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF; // Conservative Rasterizationがオンかオフかを識別
+        // ブレンドステート
         D3D12_BLEND_DESC blendDesc = {};
-        blendDesc.AlphaToCoverageEnable                 = FALSE;
-        blendDesc.IndependentBlendEnable                = FALSE;
-        blendDesc.RenderTarget[0].BlendEnable           = FALSE;
-        blendDesc.RenderTarget[0].LogicOpEnable         = FALSE;
-        blendDesc.RenderTarget[0].SrcBlend              = D3D12_BLEND_ONE;
-        blendDesc.RenderTarget[0].DestBlend             = D3D12_BLEND_ZERO;
-        blendDesc.RenderTarget[0].BlendOp               = D3D12_BLEND_OP_ADD;
-        blendDesc.RenderTarget[0].SrcBlendAlpha         = D3D12_BLEND_ONE;
-        blendDesc.RenderTarget[0].DestBlendAlpha        = D3D12_BLEND_ZERO;
-        blendDesc.RenderTarget[0].BlendOpAlpha          = D3D12_BLEND_OP_ADD;
-        blendDesc.RenderTarget[0].LogicOp               = D3D12_LOGIC_OP_NOOP;
-        blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        blendDesc.AlphaToCoverageEnable                 = FALSE;                        // ピクセルをレンダー ターゲットに設定するときに、マルチサンプリング テクニックとしてアルファトゥカバレッジを使用するかどうかを指定します。
+        blendDesc.IndependentBlendEnable                = FALSE;                        // 同時処理のレンダー ターゲットで独立したブレンディングを有効にするには、TRUE に設定します。FALSE に設定すると、RenderTarget[0] のメンバーのみが使用されます。RenderTarget[1..7] は無視されます。
+        // 以下はデフォルトの値を設定している
+        blendDesc.RenderTarget[0].BlendEnable           = FALSE;                        // ブレンドを有効にするかどうか
+        blendDesc.RenderTarget[0].LogicOpEnable         = FALSE;                        // 論理演算を有効にするかどうか
+        blendDesc.RenderTarget[0].SrcBlend              = D3D12_BLEND_ONE;              // ピクセルシェーダーの出力するRGB値に対して実行する操作を指定するD3D12_BLEND型の値
+        blendDesc.RenderTarget[0].DestBlend             = D3D12_BLEND_ZERO;             // レンダーターゲットの現在のRGB値に対して実行する操作を指定するD3D12_BLEND型の値
+        blendDesc.RenderTarget[0].BlendOp               = D3D12_BLEND_OP_ADD;           // SrcBlendとDestBlendを結合する方法を定義するD3D12_BLEND_OP型の値
+        blendDesc.RenderTarget[0].SrcBlendAlpha         = D3D12_BLEND_ONE;              // ピクセルシェーダーが出力するアルファ値に対して実行する操作を指定するD3D12_BLEND型の値
+        blendDesc.RenderTarget[0].DestBlendAlpha        = D3D12_BLEND_ZERO;             // レンダーターゲットの現在のアルファ値に対して実行する操作を指定するD3D12_BLEND型の値
+        blendDesc.RenderTarget[0].BlendOpAlpha          = D3D12_BLEND_OP_ADD;           // SrcBlendAlphaとDestBlendAlphaを結合する方法を定義するD3D12_BLEND_OP型の値
+        blendDesc.RenderTarget[0].LogicOp               = D3D12_LOGIC_OP_NOOP;          // レンダーターゲットを構成する論理演算を指定するD3D12_LOGIC_OP型の値
+        blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL; // ビット単位のOR演算を使用して結合されたD3D12_COLOR_WRITE_ENABLE型の値の組み合わせ
+        for (UINT i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i) {
+            blendDesc.RenderTarget[i] = D3D12_RENDER_TARGET_BLEND_DESC {
+                FALSE,
+                FALSE,
+                D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+                D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+                D3D12_LOGIC_OP_NOOP,
+                D3D12_COLOR_WRITE_ENABLE_ALL
+            };
+        }
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-        psoDesc.PrimitiveTopologyType           = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        psoDesc.InputLayout.NumElements         = 0;
+        psoDesc.PrimitiveTopologyType           = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; // 
+        psoDesc.InputLayout.NumElements         = 1;                                      // 
+        psoDesc.InputLayout.pInputElementDescs  = inputLayout;
+        psoDesc.pRootSignature                  = m_RootSignature.Get();                  // ID3D12RootSignatureオブジェクトへのポインター
+        psoDesc.IBStripCutValue                 = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
         psoDesc.pRootSignature                  = m_RootSignature.Get();
-        psoDesc.VS.pShaderBytecode              = vs->GetBufferPointer();
-        psoDesc.VS.BytecodeLength               = vs->GetBufferSize();
-        psoDesc.PS.pShaderBytecode              = ps->GetBufferPointer();
-        psoDesc.PS.BytecodeLength               = ps->GetBufferSize();
-        psoDesc.RasterizerState                 = rasterDesc;
-        psoDesc.BlendState                      = blendDesc;
-        psoDesc.DepthStencilState.DepthEnable   = FALSE;
-        psoDesc.DepthStencilState.StencilEnable = FALSE;
-        psoDesc.SampleMask                      = UINT_MAX;
-        psoDesc.NumRenderTargets                = 1;
-        psoDesc.RTVFormats[0]                   = DXGI_FORMAT_R8G8B8A8_UNORM;
-        psoDesc.SampleDesc.Count                = 1;
+        // 頂点シェーダーを記述するD3D12_SHADER_BYTECODE構造体
+        psoDesc.VS.pShaderBytecode              = vs->GetBufferPointer();                 // D3D12_SHADER_BYTECODE構造体へのポインター
+        psoDesc.VS.BytecodeLength               = vs->GetBufferSize();                    // D3D12_SHADER_BYTECODE構造体のサイズ
+        // ピクセルシェーダーを記述するD3D12_SHADER_BYTECODE構造体
+        psoDesc.PS.pShaderBytecode              = ps->GetBufferPointer();                 // D3D12_SHADER_BYTECODE構造体へのポインター
+        psoDesc.PS.BytecodeLength               = ps->GetBufferSize();                    // D3D12_SHADER_BYTECODE構造体のサイズ
+
+        psoDesc.RasterizerState                 = rasterDesc;                             // ラスタライザの状態を記述するD3D12_RASTERIZER_DESC構造体
+        psoDesc.BlendState                      = blendDesc;                              // ブレンド状態を記述するD3D12_STREAM_OUTPUT_DESC構造体 
+        psoDesc.DepthStencilState.DepthEnable   = FALSE;                                  // 
+        psoDesc.DepthStencilState.StencilEnable = FALSE;                                  // 
+        psoDesc.SampleMask                      = UINT_MAX;                               // 
+        psoDesc.NumRenderTargets                = 1;                                      // 
+        psoDesc.RTVFormats[0]                   = DXGI_FORMAT_R8G8B8A8_UNORM;             // 
+        psoDesc.SampleDesc.Count                = 1;                                      // 
         hr = m_spDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(m_Pso.ReleaseAndGetAddressOf()));
         if (FAILED(hr)) {
-            throw std::runtime_error("ID3D12->CreateGraphicsPipelineState() is failed value");
+            throw std::runtime_error("ID3D12Device->CreateGraphicsPipelineState() is failed value");
         }
         vs->Release();
         ps->Release();
+
+        struct float3 
+        {
+            float f[3];
+        };
+
+        float3 vbData[4] =
+        {
+            { -0.7f,  0.7f,  0.0f },
+            {  0.7f,  0.7f,  0.0f },
+            { -0.7f, -0.7f,  0.0f },
+            {  0.7f, -0.7f,  0.0f }
+        };
+        unsigned short idData[6] = { 0, 1, 2, 2, 1, 3 };
+        // 
+        D3D12_HEAP_PROPERTIES heapProps;
+        heapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;          // ヒープタイプを指定するD3D12_CPU_PROPERTY型の値
+        heapProps.CreationNodeMask     = 1;                               // ヒープのCPUページプロパティを指定するD3D12_CPU_PAGE_PROPERTY型の値
+        heapProps.VisibleNodeMask      = 1;                               // ヒープのCPUプロパティ
+        heapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN; // 
+        heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;       // 
+        D3D12_RESOURCE_DESC   descResourceTex;
+        descResourceTex.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+        descResourceTex.Alignment          = 0;
+        descResourceTex.Width              = sizeof(idData) + sizeof(vbData);
+        descResourceTex.Height             = 1;
+        descResourceTex.DepthOrArraySize   = 1;
+        descResourceTex.MipLevels          = 1;
+        descResourceTex.Format             = DXGI_FORMAT_UNKNOWN;
+        descResourceTex.SampleDesc.Count   = 1;
+        descResourceTex.SampleDesc.Quality = 0;
+        descResourceTex.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        descResourceTex.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+        // ヒープがリソース全体を格納するのに十分な大きさでリソースがヒープにマップされるように、
+        // リソースと暗黙のヒープ両方を作成する。
+        hr = m_spDevice->CreateCommittedResource
+        (
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &descResourceTex,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(m_VB.ReleaseAndGetAddressOf())
+        );
+        if (FAILED(hr)) {
+            throw std::runtime_error("ID3D12Device->CreateCommittedResource() is failed value");
+        }
+        m_VB->SetName(L"VertexBuffer");
+        char* vbUploadPtr = nullptr;
+        hr = m_VB->Map(0, nullptr, reinterpret_cast<void**>(&vbUploadPtr));
+        memcpy_s(vbUploadPtr, sizeof(vbData), vbData, sizeof(vbData));
+        memcpy_s(vbUploadPtr + sizeof(vbData), sizeof(idData), idData, sizeof(idData));
+        m_VB->Unmap(0, nullptr);
+
+        m_VBView.BufferLocation = m_VB->GetGPUVirtualAddress();
+        m_VBView.StrideInBytes  = sizeof(float3);
+        m_VBView.SizeInBytes    = sizeof(vbData);
+        m_IBView.BufferLocation = m_VB->GetGPUVirtualAddress() + sizeof(vbData);
+        m_IBView.Format         = DXGI_FORMAT_R16_UINT;
+        m_IBView.SizeInBytes    = sizeof(idData);
+        //TODO: FullScreen
+        //// test
+        //// FIXME: Works fine only odd frame
+        ////if (m_FrameCount == 9)
+        ////{
+        //    hr = m_SwapChain->SetFullscreenState(TRUE, nullptr);
+        //    if (FAILED(hr)) {
+        //        throw std::runtime_error("ID3D12->CreateGraphicsPipelineState() is failed value");
+        //    }
+        ////}
+        ////if (m_FrameCount == 119)
+        ////{
+        ////    auto hr = m_SwapChain->SetFullscreenState(FALSE, nullptr);
+        ////    if (FAILED(hr)) {
+        ////        throw std::runtime_error("ID3D12->CreateGraphicsPipelineState() is failed value");
+        ////    }
+        ////}
+
+        //BOOL isFullScreen;
+        // hr = m_SwapChain->GetFullscreenState(&isFullScreen, nullptr);
+        //if (FAILED(hr)) {
+        //    throw std::runtime_error("IDXGISwapChain1->GetFullscreenState() is failed value");
+        //}
+        //if (m_IsFullScreen != isFullScreen) {
+        //    m_IsFullScreen = isFullScreen;
+        //    for (auto& d : m_D3DBuffer) {
+        //        d.Reset();
+        //    }
+
+        //    RECT rect;
+        //    GetClientRect(GetActiveWindow(), &rect);
+        //    DXGI_MODE_DESC mode = {};
+        //    mode.Format = DXGI_FORMAT_UNKNOWN;
+        //    mode.Width = rect.right;
+        //    mode.Height = rect.bottom;
+        //    mode.RefreshRate.Denominator = 1;
+        //    mode.RefreshRate.Numerator = 60; // FIXME: Frame rate is variant
+        //    hr = m_SwapChain->ResizeTarget(&mode);
+        //    if (FAILED(hr)) {
+        //        throw std::runtime_error("IDXGISwapChain1->GetFullscreenState() is failed value");
+        //    }
+        //    hr = m_SwapChain->ResizeBuffers(BUFFER_COUNT, 0, 0, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+        //    if (FAILED(hr)) {
+        //        throw std::runtime_error("IDXGISwapChain1->GetFullscreenState() is failed value");
+        //    }
+        //    auto rtvStep = m_spDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        //    for (auto i = 0u; i < BUFFER_COUNT; i++)
+        //    {
+        //        hr = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(m_D3DBuffer[i].ReleaseAndGetAddressOf()));
+        //        if (FAILED(hr)) {
+        //            throw std::runtime_error("IDXGISwapChain1->GetFullscreenState() is failed value");
+        //        }
+        //        m_D3DBuffer[i]->SetName(L"SwapChain_Buffer");
+
+        //        auto desc = m_D3DBuffer[i]->GetDesc();
+        //        m_BufferWidth = static_cast<int>(desc.Width);
+        //        m_BufferHeight = static_cast<int>(desc.Height);
+        //        std::stringstream ss;
+        //        ss << "#SwapChain size changed (" << m_BufferWidth << "," << m_BufferHeight << ")" << std::endl;
+        //        OutputDebugStringA(ss.str().c_str());
+
+        //        auto d = m_DescHeapRtv->GetCPUDescriptorHandleForHeapStart();
+        //        d.ptr += i * rtvStep;
+        //        m_spDevice->CreateRenderTargetView(m_D3DBuffer[i].Get(), nullptr, d);
+        //    }
+        //}
 
         return true;
     }
@@ -292,7 +440,6 @@ namespace got {
     void DirectX12::draw()
     {
         ++m_FrameCount;
-
         // Get current RTV descriptor
         auto descHandleRtvStep = m_spDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         D3D12_CPU_DESCRIPTOR_HANDLE descHandleRtv = m_DescHeapRtv->GetCPUDescriptorHandleForHeapStart();
@@ -333,8 +480,10 @@ namespace got {
         // Draw
         m_CmdList->SetGraphicsRootSignature(m_RootSignature.Get());
         m_CmdList->SetPipelineState(m_Pso.Get());
-        m_CmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-        m_CmdList->DrawInstanced(4, 1, 0, 0);
+        m_CmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        m_CmdList->IASetVertexBuffers(0, 1, &m_VBView);
+        m_CmdList->IASetIndexBuffer(&m_IBView);
+        m_CmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
         // Barrier Present -> Present
         setResourceBarrier(m_CmdList.Get(), d3dBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
