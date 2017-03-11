@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////
 // 作成日:2017/02/26
-// 更新日:2017/03/06
+// 更新日:2017/03/11
 // 制作者:got
 //
 // クラス詳細:DirectX12に関するクラス
@@ -12,6 +12,8 @@
 #include <dxgi1_3.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
+#include <vector>
+#include <tuple>
 
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
@@ -38,12 +40,14 @@ namespace got
         DirectX12();
 
         bool createDevice();
-        bool createCommandAllocator();
         bool createCommandQueue();
-        bool createSwapChain();
+        bool createCommandAllocator();
         bool createCommandList();
+        bool createSwapChain();
         bool createRenderTarget();
+        bool createFence();
         bool compileShader();
+        bool loadTexture();
 
         void setResourceBarrier(
             ID3D12GraphicsCommandList *commandList,
@@ -73,12 +77,23 @@ namespace got
 
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapRtv;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapCbvSrvUav;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapSampler;
 
         Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> m_Pso;
+        Microsoft::WRL::ComPtr<ID3D12Resource>      m_TexUpload;
+        Microsoft::WRL::ComPtr<ID3D12Resource>      m_TexDefault;
         Microsoft::WRL::ComPtr<ID3D12Resource> m_VB;
         D3D12_VERTEX_BUFFER_VIEW m_VBView = {};
         D3D12_INDEX_BUFFER_VIEW  m_IBView = {};
+        std::vector<std::tuple<unsigned int, unsigned int, unsigned int>> m_TexMipSize; // <0>width, <1>height, <2>uploadHeapOffset
+
+        unsigned int texAlign(unsigned int s) {
+            return (s + D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT - 1);
+        }
+        unsigned int pitchAlign(unsigned int w) {
+            return (w + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1);
+        }
 
     };
 }
