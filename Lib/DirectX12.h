@@ -48,6 +48,7 @@ namespace got
         bool createFence();
         bool compileShader();
         bool loadTexture();
+        bool loadMesh();
 
         void setResourceBarrier(
             ID3D12GraphicsCommandList *commandList,
@@ -77,7 +78,9 @@ namespace got
 
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapRtv;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapCbvSrvUav;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapDsv;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescHeapSampler;
+        std::shared_ptr<void> m_CBUploadPtr;
 
         Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> m_Pso;
@@ -86,6 +89,10 @@ namespace got
         Microsoft::WRL::ComPtr<ID3D12Resource> m_VB;
         D3D12_VERTEX_BUFFER_VIEW m_VBView = {};
         D3D12_INDEX_BUFFER_VIEW  m_IBView = {};
+        UINT m_IndexCount;
+        UINT m_VBIndexOffset;
+        Microsoft::WRL::ComPtr<ID3D12Resource> m_DB;
+        Microsoft::WRL::ComPtr<ID3D12Resource> m_CB;
         std::vector<std::tuple<unsigned int, unsigned int, unsigned int>> m_TexMipSize; // <0>width, <1>height, <2>uploadHeapOffset
 
         unsigned int texAlign(unsigned int s) {
